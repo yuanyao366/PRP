@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="6b73e5cb-c22a-47ae-8035-babfb985af2d" name="gate" url="http://localhost">
+        <fileTransfer host="g1" port="22" rootFolder="/data1/ldz" accessType="SFTP" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+      <webServer id="9f532de2-0fa3-4e0a-b892-d040e9ec4215" name="g2" url="http://localhost">
+        <fileTransfer host="g1" port="22" rootFolder="/data2/ldz/models/prp" accessType="SFTP" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
