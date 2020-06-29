@@ -19,7 +19,7 @@ This is the implementation of our paper "Video Playback Rate Perception for Self
     $ pip install -r requirements.txt
     ```
 
-### Trainning and Testing
+### Training and Testing
 1. Run `train_predict.py` to pre-train the model on the proxy task (PRP).
 2. Run `ft_classfy.py` to fine-tune the model on the target task.
 3. Run `test_classify` to evaluate performance on the target task.
