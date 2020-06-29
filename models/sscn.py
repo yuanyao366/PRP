@@ -4,7 +4,7 @@ from models.c3d import C3D
 from models.net_part import *
 
 class SSCN_OneClip(nn.Module):
-    def __init__(self,base_network,with_classifier=False,adaptive_contact=False,num_classes=4,with_Tpyramid=False,with_ClsCycle=False):
+    def __init__(self,base_network,with_classifier=False,adaptive_contact=False,num_classes=4):
 
         super(SSCN_OneClip,self).__init__()
 
@@ -12,8 +12,6 @@ class SSCN_OneClip(nn.Module):
         self.with_classifier = with_classifier
         self.adaptive_contact = adaptive_contact
         self.num_classes = num_classes
-        self.with_Tpyramid = with_Tpyramid
-        self.with_ClsCycle = with_ClsCycle
 
 #         self.conv6 = conv3d(512, 512)
 #         self.pool6 = nn.MaxPool3d(kernel_size=(2, 3, 3), stride=(2, 1, 1), padding=(0, 1, 1))
@@ -37,26 +35,10 @@ class SSCN_OneClip(nn.Module):
 #             self.relu = nn.ReLU(inplace=True)
 #             self.dropout = nn.Dropout(p=0.5)
 
-            if self.with_ClsCycle:
-                self.base_network_cyc = base_network
-                self.pool5_cyc = nn.AdaptiveAvgPool3d(1)
-                self.fc8_cyc = nn.Linear(512, self.num_classes)
-
-
-
 
     def forward(self, x,tuple_order=None):
 
-        if self.with_Tpyramid:
-            f_x = []
-            for i in range(x.size(1)):
-                x_i = x[:, i, :, :, :, :]
-                f_x.append(self.base_network(x_i))
-            # fuse f_x1[0] with f_x1[1,2] --> x1
-            # fuse f_x2[0] with f_x2[1,2] --> x2
-            x = f_x[0]
-        else:
-            x = self.base_network(x)
+        x = self.base_network(x)
 
         if self.with_classifier:
 
@@ -76,7 +58,6 @@ class SSCN_OneClip(nn.Module):
         x = self.up3(x)
         x = self.up4_1(x)
         x = self.outc(x)
-
 
 
         if self.with_classifier:

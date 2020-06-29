@@ -54,7 +54,7 @@ class PredictDataset(data.Dataset):
         recon_rate_label = np.random.randint(low=0, high=len(self.recon_rate_list))
         for i in range(self.batch_size):
             self.recon_rate_label_batch.append(recon_rate_label)
-        self.MA_mode = 'DPAU'
+        self.MA_mode = 'MD'
         
 
     def __getitem__(self, index):
@@ -76,7 +76,6 @@ class PredictDataset(data.Dataset):
             recon_step = int(sample_step / recon_rate)
             recon_inds = torch.arange(0, len(videodata), step=recon_step)
             recon_clip = target_clip[:, recon_inds, :, :]
-            recon_flags = torch.ones(recon_clip.size(1), dtype=torch.int64)
         else:
             recon_step = sample_step
             recon_inds = torch.arange(0, len(videodata), step=recon_step)
@@ -85,33 +84,61 @@ class PredictDataset(data.Dataset):
             for i in range(len(recon_inds) - 1):
                 recon_clip2[:, i, :, :] = (recon_clip1[:, i, :, :] + recon_clip1[:, i + 1, :, :]) / 2
             c, t, h, w = recon_clip1.size()
-            recon_clip = torch.cat((recon_clip1.unsqueeze(dim=2), recon_clip2.unsqueeze(dim=2)), dim=2).reshape(c, 2 * t, h, w)
-            recon_flags = torch.zeros(recon_clip.size(1),dtype=torch.int64)
-            up_rate = int(recon_rate/sample_step)
-            recon_flags[[up_rate*k for k in range(t)]] = 1
-
+            recon_clip = torch.cat((recon_clip1.unsqueeze(dim=2), recon_clip2.unsqueeze(dim=2)), dim=2).reshape(c,
+                                                                                                                2 * t,
+                                                                                                                h, w)
         recon_clip_mask_len = int(recon_clip.size(1) / sample_step)
         recon_clip_mask = recon_clip[:, :recon_clip_mask_len, :, :]
+        #         patch_loss_mask_list = []
         motion_mask_list = []
         for i in range(sample_step):
             clip16 = target_clip[:, i * 16:(i + 1) * 16, :, :]
-            if self.MA_mode == 'DPAU':
-                motion_mask = patch_region.getPatchLossMask_DPAU(clip16, recon_clip_mask,low=0.8, high=2.0)
-            elif self.MA_mode == 'Gauss':
-                motion_mask = patch_region.getPatchLossMask_Gauss(clip16, recon_clip_mask,low=0.8, high=2.0)
-            else:
-                motion_mask = torch.ones_like(recon_clip_mask)
-            motion_mask_list.append(motion_mask)
-        motion_mask = torch.cat(motion_mask_list, dim=1)
+            max_patch_x, max_patch_y, patch_loss_mask = patch_region.getPatchLossMask_stepsize(clip16, recon_clip_mask)
+            #             patch_loss_mask_list.append(patch_loss_mask)
 
-        return sample_clip, recon_clip, sample_step_label, recon_rate, motion_mask, recon_flags
+            motion_mask = torch.ones_like(recon_clip_mask)
+            patch_size = 28
+            h = 112
+            w = 112
+            sigma = patch_size / 2
+            ux = max_patch_x + patch_size / 2
+            uy = max_patch_y + patch_size / 2
+            vx = np.arange(0, h, 1)
+            vx = np.reshape(vx, (h, 1))
+            vy = np.arange(0, w, 1)
+            vy = np.reshape(vy, (1, w))
+            fx = np.exp((-0.5) * (1 / sigma) * (1 / sigma) * (vx - ux) * (vx - ux))
+            fy = np.exp((-0.5) * (1 / sigma) * (1 / sigma) * (vy - uy) * (vy - uy))
+            fxy = np.matmul(fx, fy)
+            fxy = 1.2 / (fxy.max() - fxy.min()) * (fxy - fxy.min()) + 0.8
+            fxy = torch.from_numpy(fxy).type(torch.FloatTensor)
+            motion_mask = motion_mask[:, ] * fxy
+            motion_mask_list.append(motion_mask)
+            
+        motion_mask = torch.cat(motion_mask_list, dim=1)
+        
+        
+        recon_clip_mask_len = int(recon_clip.size(1) / sample_step)
+        recon_clip_mask = recon_clip[:, :recon_clip_mask_len, :, :]
+        patch_loss_mask_list = []
+        #         motion_mask_list = []
+        for i in range(sample_step):
+            clip16 = target_clip[:, i * 16:(i + 1) * 16, :, :]
+            patch_loss_mask = patch_region.getPatchLossMask_DPAU(clip16, recon_clip_mask,low=0.8, high=2.0)
+            patch_loss_mask_list.append(patch_loss_mask)
+        patch_loss_mask = torch.cat(patch_loss_mask_list, dim=1)
+        #         motion_mask = torch.cat(motion_mask_list,dim=1)
+#         print(recon_clip.size())
+
+
+        return sample_clip, recon_clip, sample_step_label, recon_rate, motion_mask
 
     def loadcvvideo_Finsert(self, index, recon_rate=None, sample_step=None):
-        need = 16
+        need = 16;
         fname = self.list[index]
         fname = os.path.join(self.root, 'video', fname)
 
-        capture = cv2.VideoCapture(fname)
+        capture = cv2.VideoCapture(fname);
         frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
         if sample_step is None:
@@ -126,51 +153,61 @@ class PredictDataset(data.Dataset):
         else:
             sample_step_label = self.sample_step_list.index(sample_step)
 
+
         sample_len = need * sample_step
         shortest_len = sample_len + 1
         while frame_count < shortest_len:
-            index = np.random.randint(self.__len__())
+            index = np.random.randint(self.__len__());
             fname = self.list[index]
             fname = os.path.join(self.root, 'video', fname)
-            capture = cv2.VideoCapture(fname)
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        start = np.random.randint(0, frame_count - shortest_len + 1)
+            capture = cv2.VideoCapture(fname);
+            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT));
+
+        start = np.random.randint(0, frame_count - shortest_len + 1);
         if start > 0:
-            start = start - 1
+            start = start - 1;
         buffer = []
-        count = 0
-        retaining = True
+        count = 0;
+        retaining = True;
         sample_count = 0
 
         while (sample_count < sample_len and retaining):
-            retaining, frame = capture.read()
+            retaining, frame = capture.read();
+
             if retaining is False:
-                count += 1
-                break
+                count += 1;
+
+                break;
             if count >= start:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 buffer.append(frame)
                 sample_count = sample_count + 1
-            count += 1
-        capture.release()
+            count += 1;
 
+        capture.release();
         while len(buffer) < sample_len:
             index = np.random.randint(self.__len__());
             print('retaining:{} buffer_len:{} sample_len:{}'.format(retaining, len(buffer), sample_len))
+            # buffer,sampe_label = self.loadcvvideo_msr(index)
             buffer, sample_step_label = self.loadcvvideo_Finsert(index, recon_rate, sample_step)
             print('reload')
 
         return buffer, sample_step_label
 
     def crop(self, frames):
-        video_clips = []
+        video_clips = [];
         seed = random.random()
+
         for frame in frames:
             random.seed(seed)
-            frame = self.toPIL(frame)
-            frame = self.transforms(frame)
+
+            frame = self.toPIL(frame);
+
+            frame = self.transforms(frame);
+
             video_clips.append(frame)
+
         clip = torch.stack(video_clips).permute(1, 0, 2, 3)
 
         return clip
@@ -181,7 +218,7 @@ class PredictDataset(data.Dataset):
 
 
 class ClassifyDataSet(data.Dataset):
-    def __init__(self, root, mode="train", split="1", data_name="UCF-101"):
+    def __init__(self, root, mode="train"):
 
         self.transforms = transforms.Compose([
             transforms.Resize((128, 171)),
@@ -193,8 +230,7 @@ class ClassifyDataSet(data.Dataset):
         self.videos = []
         self.labels = [];
         self.toPIL = transforms.ToPILImage()
-        self.split = split#'1';
-        self.data_name = data_name
+        self.split = '1';
 
         class_idx_path = os.path.join(root, 'split', 'classInd.txt')
         self.class_idx2label = pd.read_csv(class_idx_path, header=None, sep=' ').set_index(0)[1]
@@ -210,17 +246,11 @@ class ClassifyDataSet(data.Dataset):
     def loadcvvideo(self, fname, count_need=16):
         fname = os.path.join(self.root, 'video', fname)
         capture = cv2.VideoCapture(fname);
-        if self.data_name == 'UCF-101':
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        elif self.data_name == 'hmdb':
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) - 1
+        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT));
 
         if count_need == 0:
             count_need = frame_count;
         start = np.random.randint(0, frame_count - count_need + 1);
-        if start > 0 and self.data_name == 'hmdb':
-            start = start - 1
-
         buffer = []
         count = 0;
         retaining = True;
@@ -265,7 +295,7 @@ class ClassifyDataSet(data.Dataset):
                 videoname = self.train_split[index]
                 videodata, retrain = self.loadcvvideo(videoname, count_need=16)
 
-            #videodata = self.randomflip(videodata)
+            videodata = self.randomflip(videodata)
 
             video_clips = [];
             seed = random.random()
@@ -295,7 +325,6 @@ class ClassifyDataSet(data.Dataset):
         return clip, label - 1
 
     def randomflip(self, buffer):
-        print('flip')
         if np.random.random() < 0.5:
             for i, frame in enumerate(buffer):
                 buffer[i] = cv2.flip(frame, flipCode=1)
