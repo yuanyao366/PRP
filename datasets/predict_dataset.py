@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import torch
 import numpy as np
+import ffmpeg
+import skvideo.io
 import pandas as pd
 import argparse
 import collections
@@ -183,17 +185,23 @@ class PredictDataset(data.Dataset):
 class ClassifyDataSet(data.Dataset):
     def __init__(self, root, mode="train", split="1", data_name="UCF-101"):
 
-        self.transforms = transforms.Compose([
-            transforms.Resize((128, 171)),
-            transforms.RandomCrop(112),
-            transforms.ToTensor()])
+        if self.mode == 'train':
+            self.transforms = transforms.Compose([
+                transforms.Resize((128, 171)),
+                transforms.RandomCrop(112),
+                transforms.ToTensor()])
+        else:
+            self.transforms = transforms.Compose([
+                transforms.Resize((128, 171)),
+                transforms.CenterCrop(112),
+                transforms.ToTensor()])
 
-        self.root = root;
-        self.mode = mode;
+        self.root = root
+        self.mode = mode
         self.videos = []
-        self.labels = [];
+        self.labels = []
         self.toPIL = transforms.ToPILImage()
-        self.split = split#'1';
+        self.split = split
         self.data_name = data_name
 
         class_idx_path = os.path.join(root, 'split', 'classInd.txt')
@@ -209,38 +217,41 @@ class ClassifyDataSet(data.Dataset):
 
     def loadcvvideo(self, fname, count_need=16):
         fname = os.path.join(self.root, 'video', fname)
-        capture = cv2.VideoCapture(fname);
-        if self.data_name == 'UCF-101':
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        elif self.data_name == 'hmdb':
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) - 1
-
+        capture = cv2.VideoCapture(fname)
+        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        if self.dataset == 'HMDB-51':
+            frame_count = frame_count - 1
         if count_need == 0:
-            count_need = frame_count;
+            count_need = frame_count
+        else:
+            while(frame_count<count_need):
+                capture.release()
+                index = np.random.randint(self.__len__())
+                fname = self.list[index]
+                fname = os.path.join(self.root, 'video', fname)
+                capture = cv2.VideoCapture(fname)
+                frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))              
         start = np.random.randint(0, frame_count - count_need + 1);
-        if start > 0 and self.data_name == 'hmdb':
+        if start > 0 and self.data_name == 'HMDB-51':
             start = start - 1
 
         buffer = []
-        count = 0;
-        retaining = True;
-        sample_count = 0;
+        count = 0
+        retaining = True
+        sample_count = 0
 
         while (sample_count < count_need and retaining):
-            retaining, frame = capture.read();
-
+            retaining, frame = capture.read()
             if retaining is False:
-                count += 1;
-
-                break;
+                count += 1
+                break
             if count >= start:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                # frame = cv2.resize(frame, (171, 128))
                 buffer.append(frame)
                 sample_count = sample_count + 1
-            count += 1;
+            count += 1
 
-        capture.release();
+        capture.release()
 
         return buffer, retaining
 
@@ -261,35 +272,22 @@ class ClassifyDataSet(data.Dataset):
             while retrain == False or len(videodata) < 16:
                 print('reload');
                 index = np.random.randint(self.__len__());
-
                 videoname = self.train_split[index]
                 videodata, retrain = self.loadcvvideo(videoname, count_need=16)
 
-            #videodata = self.randomflip(videodata)
-
-            video_clips = [];
+            video_clips = []
             seed = random.random()
-
             for frame in videodata:
                 random.seed(seed)
-
-                frame = self.toPIL(frame);
-
-                frame = self.transforms(frame);
-
+                frame = self.toPIL(frame)
+                frame = self.transforms(frame)
                 video_clips.append(frame)
-
             clip = torch.stack(video_clips).permute(1, 0, 2, 3)
 
         elif self.mode == 'test':
-            videodata, retrain = self.loadcvvideo(videoname, count_need=0)
-            while retrain == False or len(videodata) < 16:
-                print('reload');
-                index = np.random.randint(self.__len__());
-
-                videoname = self.test_split[index]
-                videodata, retrain = self.loadcvvideo(videoname, count_need=16)
-            clip = self.gettest(videodata);
+            fname = os.path.join(self.root, 'video', videoname)
+            videodata = skvideo.io.vread(fname)
+            clip = self.gettest(videodata)
         label = self.class_label2idx[videoname[:videoname.find('/')]]
 
         return clip, label - 1
@@ -300,7 +298,7 @@ class ClassifyDataSet(data.Dataset):
             for i, frame in enumerate(buffer):
                 buffer[i] = cv2.flip(frame, flipCode=1)
 
-        return buffer;
+        return buffer
 
     def gettest(self, videodata):
         length = len(videodata)
