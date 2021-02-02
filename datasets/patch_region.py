@@ -182,9 +182,13 @@ def getPatchLossMask_DPAU(sample_clip, recon_clip, low, high):
     reshape_diff_clip = diff_clip.view(pb, pc, pt, -1)
     diff_clip_min = torch.min(reshape_diff_clip, dim=3, keepdim=True)[0].expand_as(reshape_diff_clip)
     diff_clip_max = torch.max(reshape_diff_clip, dim=3, keepdim=True)[0].expand_as(reshape_diff_clip)
-    diff_clip_max = torch.clamp(diff_clip_max, min=1e-06)
-    reshape_diff_clip = (reshape_diff_clip - diff_clip_min) / (diff_clip_max - diff_clip_min)
-    reshape_diff_clip = (high - low) * reshape_diff_clip + low
+    # diff_clip_max = torch.clamp(diff_clip_max, min=1e-06)
+    diff_clip_maxmin_val = diff_clip_max - diff_clip_min
+    if diff_clip_maxmin_val[:,0,:,:].max() <=0 and diff_clip_maxmin_val[:,1,:,:].max() <=0 and diff_clip_maxmin_val[:,2,:,:].max() <=0:
+        reshape_diff_clip = torch.ones_like(reshape_diff_clip)
+    else:
+        reshape_diff_clip = (reshape_diff_clip - diff_clip_min + 1e-06) / (diff_clip_max - diff_clip_min + 1e-06)
+        reshape_diff_clip = (high - low) * reshape_diff_clip + low
     diff_clip = reshape_diff_clip.view(pb, pc, pt, ph, pw)
     rc, rt, rh, rw = recon_clip.size()
     patch_loss_mask = F.interpolate(diff_clip, size=(rt, rh, rw), mode='trilinear', align_corners=False)
