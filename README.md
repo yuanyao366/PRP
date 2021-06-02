@@ -8,12 +8,14 @@ This is the implementation of our paper "[Video Playback Rate Perception for Sel
 ### Getting started
 
  - **Install**
- Our experiments run on Python 3.6.1 and PyTorch 0.4.1. All dependencies can be installed using pip:
+
+ 	Our experiments run on Python 3.6.1 and PyTorch 0.4.1. All dependencies can be installed using pip:
 	```sh
 	python -m pip install -r requirements.txt
 	```
  - **Data preparation**
- We construct experiments on [UCF101](https://www.crcv.ucf.edu/data/UCF101.php) and [HMDB51](https://serre-lab.clps.brown.edu/resource/hmdb-a-large-human-motion-database/#Downloads) (the split1 of UCF101 for pre-training and the rest for fine-tuning). The expected dataset directory hierarchy is as follow:
+ 
+	We construct experiments on [UCF101](https://www.crcv.ucf.edu/data/UCF101.php) and [HMDB51](https://serre-lab.clps.brown.edu/resource/hmdb-a-large-human-motion-database/#Downloads) (the split1 of UCF101 for pre-training and the rest for fine-tuning). The expected dataset directory hierarchy is as follow:
 	 ```
 	├── UCF101/HMDB51
 	│   ├── split
@@ -38,11 +40,13 @@ This is the implementation of our paper "[Video Playback Rate Perception for Sel
 	python test_classify.py
 	```
 	**Video Retrieval**
+	
 	Please refer to the code [video_retrieval_samples.py]([https://github.com/xudejing/video-clip-order-prediction/blob/master/video_retrieval_samples.py](https://github.com/xudejing/video-clip-order-prediction/blob/master/video_retrieval_samples.py)) of [VCOP]([https://openaccess.thecvf.com/content_CVPR_2019/papers/Xu_Self-Supervised_Spatiotemporal_Learning_via_Video_Clip_Order_Prediction_CVPR_2019_paper.pdf](https://openaccess.thecvf.com/content_CVPR_2019/papers/Xu_Self-Supervised_Spatiotemporal_Learning_via_Video_Clip_Order_Prediction_CVPR_2019_paper.pdf)).
 	
 ### Model zoo
  - **Models**
-Pre-trained PRP model on the split1 of UCF101: C3D[*(OneDrive)*](https://1drv.ms/u/s!Al-IKnCwKkpqilawzdPyCbeVVjD_?e=4OycfF); R3D[*(OneDrive)*](https://1drv.ms/u/s!Al-IKnCwKkpqilocEjNpxrLY326F?e=W9LI8y); R(2+1)D[*(OneDrive)*](https://1drv.ms/u/s!Al-IKnCwKkpqiljBkCPn0nALy1H4?e=dSdnAd)
+
+	Pre-trained PRP model on the split1 of UCF101: C3D[*(OneDrive)*](https://1drv.ms/u/s!Al-IKnCwKkpqilawzdPyCbeVVjD_?e=4OycfF); R3D[*(OneDrive)*](https://1drv.ms/u/s!Al-IKnCwKkpqilocEjNpxrLY326F?e=W9LI8y); R(2+1)D[*(OneDrive)*](https://1drv.ms/u/s!Al-IKnCwKkpqiljBkCPn0nALy1H4?e=dSdnAd)
  - **Action Recognition Results**
 	|   Architecture             |UCF101(%)                          |HMDB51(%)                        |
 	|----------------|-------------------------------|-----------------------------|
