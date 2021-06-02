@@ -41,7 +41,7 @@ This is the implementation of our paper "[Video Playback Rate Perception for Sel
 	```
 	**Video Retrieval**
 	
-	Please refer to the code [video_retrieval_samples.py]([https://github.com/xudejing/video-clip-order-prediction/blob/master/video_retrieval_samples.py](https://github.com/xudejing/video-clip-order-prediction/blob/master/video_retrieval_samples.py)) of [VCOP]([https://openaccess.thecvf.com/content_CVPR_2019/papers/Xu_Self-Supervised_Spatiotemporal_Learning_via_Video_Clip_Order_Prediction_CVPR_2019_paper.pdf](https://openaccess.thecvf.com/content_CVPR_2019/papers/Xu_Self-Supervised_Spatiotemporal_Learning_via_Video_Clip_Order_Prediction_CVPR_2019_paper.pdf)).
+	Please refer to the code [video_retrieval_samples.py](https://github.com/xudejing/video-clip-order-prediction/blob/master/video_retrieval_samples.py) of [VCOP](https://openaccess.thecvf.com/content_CVPR_2019/papers/Xu_Self-Supervised_Spatiotemporal_Learning_via_Video_Clip_Order_Prediction_CVPR_2019_paper.pdf).
 	
 ### Model zoo
  - **Models**
