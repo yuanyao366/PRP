@@ -56,7 +56,7 @@ This is the implementation of our paper "[Video Playback Rate Perception for Sel
 ### License
 This project is released under the [Apache 2.0 license](LICENSE).
 ### Citation
-Please cite the following paper if you feel RSPNet useful to your research
+Please cite the following paper if you feel PRP useful to your research
 ```
 @InProceedings{Yao_2020_CVPR,  
 author = {Yao, Yuan and Liu, Chang and Luo, Dezhao and Zhou, Yu and Ye, Qixiang},  
